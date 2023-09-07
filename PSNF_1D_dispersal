@@ -121,11 +121,11 @@ for index=1:size(dSS_vec,2)
         
         % Diffusion
         
-        % calculate Flow in x-direction : Flow = -D * d/dx;
+        % Flow in x-direction
         FXS(2:NX)=(S(2:NX)-S(1:NX-1))/DeltaX;
         FXI(2:NX)=(I(2:NX)-I(1:NX-1))/DeltaX;
         
-        % calculate netflow
+        % Netflow
         NetS=dSS*(FXS(2:NX+1)-FXS(1:NX))/DeltaX;
         NetI=dII*(FXI(2:NX+1)-FXI(1:NX))/DeltaX;
         
