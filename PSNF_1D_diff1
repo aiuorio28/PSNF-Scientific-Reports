@@ -1,0 +1,510 @@
+% % Simulation of the model for spatial Plant-Soil Negative Feedback
+% % on a 2-dimensional domain
+%
+% Variables:
+% S (seeds), N (seedlings), A (adults), T (toxicity)
+
+% Equations:
+% dS/dt = dSS*Delta S + gS*A - kS*S
+% dN/dt = gN*S/(1+beta*exp(s*T)) - kN0*N - gA*N*(1-A/Amax) - kN1*N*T
+% dA/dt = (gA*N+cA*A)*(1-A/Amax) - kA*A
+% dT/dt = dTT*Delta T + cT*A - kT*T
+
+clear all
+close all
+tic
+% % Figure Settings [left, bottom, width, height]
+% Fig=figure('Position',[100 100 1200 600]);
+
+% System discretisation
+DeltaX=0.1; % 0.1
+% DeltaY=0.1; % 0.1
+
+% % Initial fraction of grid cells with bare ground
+% frac=0.95;  % (-)
+
+% Parameter values (fixed)
+gS=0.033; %0.01-5
+kS=0.33; %1-6
+gN=5; %2.5-1250 15
+s=34; %0-68
+beta=10^(-5); %FIX: 10^(-5)
+kN0=0.5; %0.02-0.74
+kN1=1; %0.2-0.7 0.05
+gA=0.2; %0.00019-1
+cA=0.25; %FIX: 0.25
+Amax=30; %FIX: 30
+kA=0.01; %FIX: 0.01
+cT=1; %FIX: 0.7
+kT=0.7; %FIX: 0.7
+% dSS=3; %3-4
+dTT=0.5; %"free" %0.5
+
+% Parameter values (variable)
+dSSref=3;
+dSS_vec=[25/100*dSSref 50/100*dSSref 75/100*dSSref dSSref];
+
+% Tolerances
+eps=0.1;
+perc=0.03;
+tA=1/10000000;
+tN=1/10000000;
+q=1/100;
+
+% Number of grid cells
+m=600; %400 %100
+NX=m;
+% NY=m;
+
+% Timesteps
+dt=0.001;     % timestep
+Time=0;      % begin time
+EndTime=8;    % end time
+PlotStep=1;
+PlotTime=PlotStep;
+TF=EndTime/dt;
+
+% Vectors to store infos
+tfin_vec=zeros(1,length(dSS_vec));
+tfin_ind=zeros(1,length(dSS_vec));
+ampl=zeros(length(dSS_vec),TF);
+maxampl_vec=zeros(1,length(dSS_vec));
+xampl_vec=zeros(length(dSS_vec),TF);
+pampl_vec=zeros(length(dSS_vec),TF);
+xMax_vec=zeros(1,length(dSS_vec));
+pMax_vec=zeros(1,length(dSS_vec));
+
+Sfin=zeros(length(dSS_vec),m);
+Nfin=zeros(length(dSS_vec),m);
+Afin=zeros(length(dSS_vec),m);
+Tfin=zeros(length(dSS_vec),m);
+
+Sseries=zeros(length(dSS_vec),m,TF-1);
+Nseries=zeros(length(dSS_vec),m,TF-1);
+Aseries=zeros(length(dSS_vec),m,TF-1);
+Tseries=zeros(length(dSS_vec),m,TF-1);
+
+xMax_lab=zeros(1,length(dSS_vec));
+pMax_lab=zeros(1,length(dSS_vec));
+eqN=zeros(1,length(dSS_vec));
+
+% parameter loops
+
+for index=1:size(dSS_vec,2)
+    dSS=dSS_vec(index);
+    
+    % Simulation loop
+    Time=0;      % begin time
+    it=1;
+    PlotTime=PlotStep; % (d)
+    
+    % Initialisation
+    S = zeros(1,m);
+    N = zeros(1,m);
+    A = zeros(1,m);
+    T = zeros(1,m);
+    dS = zeros(1,m); % reaction term for S
+    dN = zeros(1,m); % reaction term for N
+    dA = zeros(1,m); % reaction term for A
+    dT = zeros(1,m); % reaction term for T
+    NetS = zeros(1,m); % diffusion term for S
+    NetT = zeros(1,m); % diffusion term for T
+    
+    % Boundary conditions
+    % FYS = zeros(NY+1,NX);   	% bound.con. no flow in/out to Y-direction
+    FXS = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
+    % FYT = zeros(NY+1,NX);   	% bound.con. no flow in/out to Y-direction
+    FXT = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
+    
+    % Initial state
+    % S
+    %         for i=1:m
+    %             for j=1:m
+    %                 if (i <= m/2 + 10 && i >= m/2 - 10) % && j <= m/2 + 10 && j >= m/2 - 10)
+    %                     S(i)=1;
+    %                 else
+    %                     S(i)=0;
+    %                 end
+    %             end
+    %         end
+    for i=1:m
+        S(i)=exp(-m/4 + i - i^2/m);
+    end
+    % N
+    N(:)=0;
+    % A
+    A(:)=0;
+    % T
+    T(:)=0;
+    
+    
+    % Timesteps
+    while Time<=EndTime
+        
+        % Reaction
+        
+        dS = gS.*A - kS.*S;
+        dN = gN.*S./(1+beta.*exp(s.*T)) - kN0.*N - gA.*N.*(1-A./Amax) - kN1.*N.*T;
+        dA = (gA.*N+cA.*A).*(1-A./Amax) - kA.*A;
+        dT = cT.*A - kT.*T;
+        
+        % Diffusion
+        
+        % calculate Flow in x-direction : Flow = -D * d/dx;
+        FXS(2:NX)=(S(2:NX)-S(1:NX-1))/DeltaX;
+        FXT(2:NX)=(T(2:NX)-T(1:NX-1))/DeltaX;
+        
+        %     % calculate Flow in y-direction: Flow = -D * d/dy;
+        %     FYS(2:NY,1:NX)=-dSS*(S(2:NY,:)-S(1:NY-1,:))*DeltaX/DeltaY;
+        %     FYT(2:NY,1:NX)=-dTT*(T(2:NY,:)-T(1:NY-1,:))*DeltaX/DeltaY;
+        
+        % calculate netflow
+        NetS=dSS*(FXS(2:NX+1)-FXS(1:NX))/DeltaX;
+        NetT=dTT*(FXT(2:NX+1)-FXT(1:NX))/DeltaX;
+        
+        % Update
+        S=S+(NetS+dS)*dt;
+        N=N+dN*dt;
+        A=A+dA*dt;
+        T=T+(NetT+dT)*dt;
+        
+        % Computing quantities for maximum amplitude
+        maxN=max(N);
+        minN=min(N);
+        xMaxN=find(abs(N-max(N))<tN,1,'last');
+        xmid=round((m/2+xMaxN)/2,0);
+        
+        if (N(m/2) <= N(xmid)) && (N(xmid) <= maxN)
+            ampl(index,it)=abs(maxN-N(m/2));
+            xampl_vec(index,it)=xMaxN;
+            pampl_vec(index,it)=maxN;
+        end
+        
+        Time=Time+dt;
+        
+        Sseries(index,:,it)=S(:);
+        Nseries(index,:,it)=N(:);
+        Aseries(index,:,it)=A(:);
+        Tseries(index,:,it)=T(:);
+        
+        it=it+1;
+        
+    end
+    
+    maxampl_vec(index) = max(ampl(index,:));
+    tfin_vec(index) = (find(ampl(index,:)==max(ampl(index,:)),1,'first'))*dt;
+    tfin_ind(index) = tfin_vec(index)/dt;
+    xMax_vec(index)=xampl_vec(index,tfin_ind(index));
+    pMax_vec(index)=pampl_vec(index,tfin_ind(index));
+    
+    Sfin(index,:)=Sseries(index,:,tfin_vec(index)/dt);
+    Nfin(index,:)=Nseries(index,:,tfin_vec(index)/dt);
+    Afin(index,:)=Aseries(index,:,tfin_vec(index)/dt);
+    Tfin(index,:)=Tseries(index,:,tfin_vec(index)/dt);
+    
+    SSS = ['save MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat Sfin'];
+    eval(SSS)
+    
+    NNN = ['save MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat Nfin'];
+    eval(NNN)
+    
+    AAA = ['save MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat Afin'];
+    eval(AAA)
+    
+    TTT = ['save MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat Tfin'];
+    eval(TTT)
+end
+toc
+
+
+%% PLOT MAKER
+
+% % Figure Settings [left, bottom, width, height]
+% Fig=figure('Position',[100 100 1200 600]);
+
+darkg = [0 0.5 0.4];
+% m=600;
+
+% linS = {':k','-.k','--k','-k','-r','-b'};
+
+lcol = {[0 0 0], [0 0 0], [0 0 0], [0 0 0]};
+% lcolOLD = {[0.7 0.7 0.7],  [0.7 0.7 0.7],  [0.7 0.7 0.7], [0 0 0], [0 0 0]}; %[0.7 0.7 0.7],  
+lcolAcomb = {[0.8500, 0.3250, 0.0980],  [0.8500, 0.3250, 0.0980],  [0.8500, 0.3250, 0.0980], [0.6350, 0.0780, 0.1840], [0.6350, 0.0780, 0.1840]}; %[0.8500, 0.3250, 0.0980],  
+lsty = {':','-.','--','-'};
+% lstyOLD = {':','--','-','--','-'}; %'-.',
+
+for index=1:size(dSS_vec,2)
+    dSS=dSS_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])          % METTI NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    
+    % FRAMES LOOP
+    % z=size(Aseries,3);  % numero di time steps (CONTROLLA NOME MATRICE 3D)
+    % figure
+    % figtitle=sgtitle(['s=' num2str(s)]);
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    TT=Tfin(index,:);
+    
+    figure(1)
+    plot(SS,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    %     set(gca,'xtick',[],'ytick',[])
+    %     colormap(flipud(gray));
+    axis([m/2 m 0 2])
+    xlabel('Distance from center of adults (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Seeds (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+end
+hold off;
+
+xh = get(gca,'xlabel'); % handle to the label object
+yh = get(gca,'ylabel'); % handle to the label object
+px = get(xh,'position'); % get the current position property
+py = get(yh,'position'); % get the current position property
+px(2) = px(2)-0.01 ;        % double the distance 1.15*px(2) ;
+py(1) = py(1)-0.9 ;        % double the distance 0.97*py(1) ;
+set(xh,'position',px);  % set the new position
+set(yh,'position',py);   % set the new position
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(dSS_vec),1);
+for j=1:size(dSS_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Seed dispersal', 'intensity'})
+leg.Title.Visible = 'on';
+
+
+for index=1:size(dSS_vec,2)
+    dSS=dSS_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])          % METTI NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    
+    % FRAMES LOOP
+    % z=size(Aseries,3);  % numero di time steps (CONTROLLA NOME MATRICE 3D)
+    % figure
+    % figtitle=sgtitle(['s=' num2str(s)]);
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    TT=Tfin(index,:);
+    
+    figure(2)
+    plot(NN,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    %     set(gca,'xtick',[],'ytick',[])
+    %     colormap(flipud(gray));
+    axis([m/2 m 0 0.6])
+    xlabel('Distance from center of adults (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Seedlings (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+    if index == 1
+        xMax_lab(index)=xMax_vec(index)-25;
+        pMax_lab(index)=pMax_vec(index)+1/100;
+%         text(xMax_lab(index),pMax_lab(index),num2str(round(tfin_vec(index),2)),'FontSize',7)
+    end
+    if index >=2
+        if abs(pMax_vec(index)-pMax_vec(index-1)) <= q
+            xMax_lab(index)=xMax_lab(index-1)+20;
+            pMax_lab(index)=pMax_lab(index-1)+1/50;
+%             text(xMax_lab(index),pMax_lab(index),num2str(round(tfin_vec(index),2)),'FontSize',7)
+        else
+            xMax_lab(index)=xMax_vec(index)-20;
+            pMax_lab(index)=pMax_vec(index)+1/100;
+%             text(xMax_lab(index),pMax_lab(index),num2str(round(tfin_vec(index),2)),'FontSize',7)
+        end
+    end
+%    eqN(index)=1/(0.0288725 - 0.672269*dSS_vec(index) + 0.0464201*sqrt(0.0835471 + dSS_vec(index)*(20.9824 + 5780.87*dSS_vec(index))));
+%    yline(eqN(index),'Color',lcol{index},'linestyle',lsty{index},'LineWidth',0.5);
+end
+hold off;
+
+xh = get(gca,'xlabel'); % handle to the label object
+yh = get(gca,'ylabel'); % handle to the label object
+px = get(xh,'position'); % get the current position property
+py = get(yh,'position'); % get the current position property
+% px(2) = px(2)-0.01 ;        % double the distance 1.15*px(2) ;
+py(1) = py(1)-0.9 ;        % double the distance 0.97*py(1) ;
+set(xh,'position',px);  % set the new position
+set(yh,'position',py);   % set the new position
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(dSS_vec),1);
+for j=1:size(dSS_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Seed dispersal', 'intensity'})
+leg.Title.Visible = 'on';
+
+for index=1:size(dSS_vec,2)
+    dSS=dSS_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])          % METTI NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    
+    % FRAMES LOOP
+    % z=size(Aseries,3);  % numero di time steps (CONTROLLA NOME MATRICE 3D)
+    % figure
+    % figtitle=sgtitle(['s=' num2str(s)]);
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    TT=Tfin(index,:);
+    
+    figure(3)
+    plot(AA,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    %     set(gca,'xtick',[],'ytick',[])
+    %     colormap(flipud(gray));
+    axis([m/2 m 0 2]);
+    xlabel('Space (m)')
+    ylabel('Adults (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+end
+hold off;
+
+xh = get(gca,'xlabel'); % handle to the label object
+yh = get(gca,'ylabel'); % handle to the label object
+px = get(xh,'position'); % get the current position property
+py = get(yh,'position'); % get the current position property
+px(2) = px(2)-0.01 ;        % double the distance 1.15*px(2) ;
+py(1) = py(1)-0.9 ;        % double the distance 0.97*py(1) ;
+set(xh,'position',px);  % set the new position
+set(yh,'position',py);   % set the new position
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(dSS_vec),1);
+for j=1:size(dSS_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Seed dispersal', 'intensity'})
+leg.Title.Visible = 'on';
+
+for index=1:size(dSS_vec,2)
+    dSS=dSS_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])          % METTI NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    
+    % FRAMES LOOP
+    % z=size(Aseries,3);  % numero di time steps (CONTROLLA NOME MATRICE 3D)
+    % figure
+    % figtitle=sgtitle(['s=' num2str(s)]);
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    TT=Tfin(index,:);
+    
+    figure(4)
+    plot(TT,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    %     set(gca,'xtick',[],'ytick',[])
+    %     colormap(flipud(gray));
+    axis([m/2 m 0 2]);
+    xlabel('Distance from center of adults (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Inhibitor (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+end
+hold off;
+
+xh = get(gca,'xlabel'); % handle to the label object
+yh = get(gca,'ylabel'); % handle to the label object
+px = get(xh,'position'); % get the current position property
+py = get(yh,'position'); % get the current position property
+px(2) = px(2)-0.01 ;        % double the distance 1.15*px(2) ;
+py(1) = py(1)-0.9 ;        % double the distance 0.97*py(1) ;
+set(xh,'position',px);  % set the new position
+set(yh,'position',py);   % set the new position
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(dSS_vec),1);
+for j=1:size(dSS_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Seed dispersal', 'intensity'})
+leg.Title.Visible = 'on';
+
+for index=1:size(dSS_vec,2)
+    dSS=dSS_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])          % METTI NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    
+    % FRAMES LOOP
+    % z=size(Aseries,3);  % numero di time steps (CONTROLLA NOME MATRICE 3D)
+    % figure
+    % figtitle=sgtitle(['s=' num2str(s)]);
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    TT=Tfin(index,:);
+end
+hold off;
+
+xh = get(gca,'xlabel'); % handle to the label object
+yh = get(gca,'ylabel'); % handle to the label object
+px = get(xh,'position'); % get the current position property
+py = get(yh,'position'); % get the current position property
+px(2) = px(2)-0.01 ;        % double the distance 1.15*px(2) ;
+py(1) = py(1)-0.9 ;        % double the distance 0.97*py(1) ;
+set(xh,'position',px);  % set the new position
+set(yh,'position',py);   % set the new position
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(dSS_vec),1);
+for j=1:size(dSS_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Seed dispersal', 'intensity'})
+leg.Title.Visible = 'on';
+
