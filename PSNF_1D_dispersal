@@ -179,7 +179,7 @@ end
 toc
 
 
-%% PLOT MAKER
+%% Plots
 
 darkg = [0 0.5 0.4];
 
