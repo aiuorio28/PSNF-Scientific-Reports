@@ -1,4 +1,4 @@
-%% Effect of seeds dispersal: Simulation of the PSNF model on a 1D domain
+%% Effect of seeds dispersal on maximum amplitude profiles: Simulation of the PSNF model on a 1D domain
 
 % Variables describing the density of: S (seeds), N (seedlings), A (adults), I (inhibitor)
 
