@@ -45,7 +45,6 @@ q=1/100;
 % Number of grid cells
 m=600;
 NX=m;
-% NY=m;
 
 % Timesteps
 dt=0.001;     % timestep
