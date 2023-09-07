@@ -70,10 +70,6 @@ Nseries=zeros(length(dSS_vec),m,TF-1);
 Aseries=zeros(length(dSS_vec),m,TF-1);
 Iseries=zeros(length(dSS_vec),m,TF-1);
 
-xMax_lab=zeros(1,length(dSS_vec));
-pMax_lab=zeros(1,length(dSS_vec));
-eqN=zeros(1,length(dSS_vec));
-
 % Parameter loops
 
 for index=1:size(dSS_vec,2)
