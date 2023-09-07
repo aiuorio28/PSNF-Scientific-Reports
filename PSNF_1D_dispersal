@@ -59,10 +59,6 @@ tfin_vec=zeros(1,length(dSS_vec));
 tfin_ind=zeros(1,length(dSS_vec));
 ampl=zeros(length(dSS_vec),TF);
 maxampl_vec=zeros(1,length(dSS_vec));
-xampl_vec=zeros(length(dSS_vec),TF);
-pampl_vec=zeros(length(dSS_vec),TF);
-xMax_vec=zeros(1,length(dSS_vec));
-pMax_vec=zeros(1,length(dSS_vec));
 
 Sfin=zeros(length(dSS_vec),m);
 Nfin=zeros(length(dSS_vec),m);
