@@ -1,12 +1,12 @@
 %% Simulation of the PSNF model on a 1D domain
 
-% Variables describing the density of: S (seeds), N (seedlings), A (adults), T (toxicity)
+% Variables describing the density of: S (seeds), N (seedlings), A (adults), I (inhibitor)
 
 % Equations:
 % dS/dt = dSS*Delta S + gS*A - kS*S
-% dN/dt = gN*S/(1+beta*exp(s*T)) - kN0*N - gA*N*(1-A/Amax) - kN1*N*T
+% dN/dt = gN*S/(1+beta*exp(rT*I)) - kN*N - gA*N*(1-A/Amax) - rP*N*I
 % dA/dt = (gA*N+cA*A)*(1-A/Amax) - kA*A
-% dT/dt = dTT*Delta T + cT*A - kT*T
+% dI/dt = dII*Delta I + cT*A - kI*I
 
 clear all
 close all
@@ -19,17 +19,17 @@ DeltaX=0.1; % 0.1
 gS=0.033; 
 kS=0.33; 
 gN=5; 
-s=34; 
+rT=34; 
 beta=10^(-5);
-kN0=0.5; 
-kN1=1; 
+kN=0.5; 
+rP=1; 
 gA=0.2; 
 cA=0.25; 
 Amax=30; 
 kA=0.01; 
 cT=1; 
-kT=0.7; 
-dTT=0.5; 
+kI=0.7; 
+dII=0.5; 
 
 % Parameter values (variable)
 dSSref=3; % reference value for the seeds diffusion parameter
@@ -50,10 +50,10 @@ NX=m;
 % Timesteps
 dt=0.001;     % timestep
 Time=0;      % begin time
-EndTime=8;    % end time
+EndIime=8;    % end time
 PlotStep=1;
 PlotTime=PlotStep;
-TF=EndTime/dt;
+TF=EndIime/dt;
 
 % Vectors to store infos
 tfin_vec=zeros(1,length(dSS_vec));
@@ -68,12 +68,12 @@ pMax_vec=zeros(1,length(dSS_vec));
 Sfin=zeros(length(dSS_vec),m);
 Nfin=zeros(length(dSS_vec),m);
 Afin=zeros(length(dSS_vec),m);
-Tfin=zeros(length(dSS_vec),m);
+Ifin=zeros(length(dSS_vec),m);
 
 Sseries=zeros(length(dSS_vec),m,TF-1);
 Nseries=zeros(length(dSS_vec),m,TF-1);
 Aseries=zeros(length(dSS_vec),m,TF-1);
-Tseries=zeros(length(dSS_vec),m,TF-1);
+Iseries=zeros(length(dSS_vec),m,TF-1);
 
 xMax_lab=zeros(1,length(dSS_vec));
 pMax_lab=zeros(1,length(dSS_vec));
@@ -93,17 +93,17 @@ for index=1:size(dSS_vec,2)
     S = zeros(1,m);
     N = zeros(1,m);
     A = zeros(1,m);
-    T = zeros(1,m);
+    I = zeros(1,m);
     dS = zeros(1,m); % reaction term for S
     dN = zeros(1,m); % reaction term for N
     dA = zeros(1,m); % reaction term for A
-    dT = zeros(1,m); % reaction term for T
+    dI = zeros(1,m); % reaction term for T
     NetS = zeros(1,m); % diffusion term for S
-    NetT = zeros(1,m); % diffusion term for T
+    NetI = zeros(1,m); % diffusion term for T
     
     % Boundary conditions
     FXS = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
-    FXT = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
+    FXI = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
     
     % Initial state
     % S
@@ -114,45 +114,43 @@ for index=1:size(dSS_vec,2)
     N(:)=0;
     % A
     A(:)=0;
-    % T
-    T(:)=0;
+    % I
+    I(:)=0;
     
     
     % Timesteps
-    while Time<=EndTime
+    while Time<=EndIime
         
         % Reaction
         
         dS = gS.*A - kS.*S;
-        dN = gN.*S./(1+beta.*exp(s.*T)) - kN0.*N - gA.*N.*(1-A./Amax) - kN1.*N.*T;
+        dN = gN.*S./(1+beta.*exp(rT.*I)) - kN.*N - gA.*N.*(1-A./Amax) - rP.*N.*I;
         dA = (gA.*N+cA.*A).*(1-A./Amax) - kA.*A;
-        dT = cT.*A - kT.*T;
+        dI = cT.*A - kI.*I;
         
         % Diffusion
         
         % calculate Flow in x-direction : Flow = -D * d/dx;
         FXS(2:NX)=(S(2:NX)-S(1:NX-1))/DeltaX;
-        FXT(2:NX)=(T(2:NX)-T(1:NX-1))/DeltaX;
+        FXI(2:NX)=(I(2:NX)-I(1:NX-1))/DeltaX;
         
         % calculate netflow
         NetS=dSS*(FXS(2:NX+1)-FXS(1:NX))/DeltaX;
-        NetT=dTT*(FXT(2:NX+1)-FXT(1:NX))/DeltaX;
+        NetI=dII*(FXI(2:NX+1)-FXI(1:NX))/DeltaX;
         
         % Update
         S=S+(NetS+dS)*dt;
         N=N+dN*dt;
         A=A+dA*dt;
-        T=T+(NetT+dT)*dt;
+        I=I+(NetI+dI)*dt;
         
         % Computing quantities for maximum amplitude
         maxN=max(N);
-        xMaxN=find(abs(N-max(N))<tN,1,'last');
-        xmid=round((m/2+xMaxN)/2,0);
+        xMaxN=find(abs(N-max(N))<tN,1,'last'); % spatial location of the peak on the right-half of the domain
+        xmid=round((m/2+xMaxN)/2,0); % midpoint between the domain center and xMaxN
         
         if (N(m/2) <= N(xmid)) && (N(xmid) <= maxN)
-            ampl(index,it)=abs(maxN-N(m/2));
-            xampl_vec(index,it)=xMaxN;
-            pampl_vec(index,it)=maxN;
+            ampl(index,it)=abs(maxN-N(m/2));  % amplitude of the seedlings profile
         end
         
         Time=Time+dt;
@@ -160,22 +158,20 @@ for index=1:size(dSS_vec,2)
         Sseries(index,:,it)=S(:);
         Nseries(index,:,it)=N(:);
         Aseries(index,:,it)=A(:);
-        Tseries(index,:,it)=T(:);
+        Iseries(index,:,it)=I(:);
         
         it=it+1;
         
     end
     
-    maxampl_vec(index) = max(ampl(index,:));
-    tfin_vec(index) = (find(ampl(index,:)==max(ampl(index,:)),1,'first'))*dt;
-    tfin_ind(index) = tfin_vec(index)/dt;
-    xMax_vec(index)=xampl_vec(index,tfin_ind(index));
-    pMax_vec(index)=pampl_vec(index,tfin_ind(index));
+    maxampl_vec(index) = max(ampl(index,:)); % maximum amplitude of the seedlings profile
+    tfin_vec(index) = (find(ampl(index,:)==max(ampl(index,:)),1,'first'))*dt;  % time step in which the maximum amplitude profile of the seedlings profile is reached
+    tfin_ind(index) = tfin_vec(index)/dt; % converted time in which the maximum amplitude profile of the seedlings profile is reached
     
-    Sfin(index,:)=Sseries(index,:,tfin_vec(index)/dt);
-    Nfin(index,:)=Nseries(index,:,tfin_vec(index)/dt);
-    Afin(index,:)=Aseries(index,:,tfin_vec(index)/dt);
-    Tfin(index,:)=Tseries(index,:,tfin_vec(index)/dt);
+    Sfin(index,:)=Sseries(index,:,tfin_vec(index)/dt); % S profile at the time of maximum amplitude for seedlings
+    Nfin(index,:)=Nseries(index,:,tfin_vec(index)/dt); % N profile at the time of maximum amplitude for seedlings
+    Afin(index,:)=Aseries(index,:,tfin_vec(index)/dt); % A profile at the time of maximum amplitude for seedlings
+    Ifin(index,:)=Iseries(index,:,tfin_vec(index)/dt); % I profile at the time of maximum amplitude for seedlings
     
     SSS = ['save MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat Sfin'];
     eval(SSS)
@@ -186,8 +182,8 @@ for index=1:size(dSS_vec,2)
     AAA = ['save MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat Afin'];
     eval(AAA)
     
-    TTT = ['save MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat Tfin'];
-    eval(TTT)
+    III = ['save MatrixSeriespcfin_1D_maxampl_I_diff1_dSS=' num2str(dSS) '.mat Ifin'];
+    eval(III)
 end
 toc
 
@@ -206,12 +202,12 @@ for index=1:size(dSS_vec,2)
     load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])         
     load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_diff1_dSS=' num2str(dSS) '.mat'])
     
     SS=Sfin(index,:);
     NN=Nfin(index,:);
     AA=Afin(index,:);
-    TT=Tfin(index,:);
+    II=Ifin(index,:);
     
     figure(1)
     plot(SS,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
@@ -254,12 +250,12 @@ for index=1:size(dSS_vec,2)
     load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])     
     load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_diff1_dSS=' num2str(dSS) '.mat'])
     
     SS=Sfin(index,:);
     NN=Nfin(index,:);
     AA=Afin(index,:);
-    TT=Tfin(index,:);
+    II=Ifin(index,:);
     
     figure(2)
     plot(NN,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
@@ -272,27 +268,13 @@ for index=1:size(dSS_vec,2)
     ylabel('Seedlings (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
     xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
     xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
-    if index == 1
-        xMax_lab(index)=xMax_vec(index)-25;
-        pMax_lab(index)=pMax_vec(index)+1/100;
-    end
-    if index >=2
-        if abs(pMax_vec(index)-pMax_vec(index-1)) <= q
-            xMax_lab(index)=xMax_lab(index-1)+20;
-            pMax_lab(index)=pMax_lab(index-1)+1/50;
-        else
-            xMax_lab(index)=xMax_vec(index)-20;
-            pMax_lab(index)=pMax_vec(index)+1/100;
-        end
-    end
 end
 hold off;
 
 xh = get(gca,'xlabel'); 
 yh = get(gca,'ylabel'); 
 px = get(xh,'position'); 
-py = get(yh,'position');
-% px(2) = px(2)-0.01 ;       
+py = get(yh,'position');     
 py(1) = py(1)-0.9 ;      
 set(xh,'position',px);  
 set(yh,'position',py); 
@@ -314,12 +296,12 @@ for index=1:size(dSS_vec,2)
     load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_diff1_dSS=' num2str(dSS) '.mat'])
     
     SS=Sfin(index,:);
     NN=Nfin(index,:);
     AA=Afin(index,:);
-    TT=Tfin(index,:);
+    II=Ifin(index,:);
     
     figure(3)
     plot(AA,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
@@ -361,15 +343,15 @@ for index=1:size(dSS_vec,2)
     load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_diff1_dSS=' num2str(dSS) '.mat'])
     
     SS=Sfin(index,:);
     NN=Nfin(index,:);
     AA=Afin(index,:);
-    TT=Tfin(index,:);
+    II=Ifin(index,:);
     
     figure(4)
-    plot(TT,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    plot(II,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
     if index == 1
         hold on
     end
@@ -408,12 +390,12 @@ for index=1:size(dSS_vec,2)
     load(['MatrixSeriespcfin_1D_maxampl_S_diff1_dSS=' num2str(dSS) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_N_diff1_dSS=' num2str(dSS) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_diff1_dSS=' num2str(dSS) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_T_diff1_dSS=' num2str(dSS) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_diff1_dSS=' num2str(dSS) '.mat'])
     
     SS=Sfin(index,:);
     NN=Nfin(index,:);
     AA=Afin(index,:);
-    TT=Tfin(index,:);
+    II=Ifin(index,:);
 end
 hold off;
 
