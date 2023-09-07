@@ -15,7 +15,7 @@ close all
 tic
 
 % System discretisation
-DeltaX=0.1; % 0.1
+DeltaX=0.1; 
 
 % Parameter values (fixed)
 gS=0.033; 
