@@ -196,7 +196,7 @@ for index=1:size(rP_vec,2)
     rP=rP_vec(index);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     
@@ -243,7 +243,7 @@ for index=1:size(rP_vec,2)
     rP=rP_vec(index);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     
@@ -293,7 +293,7 @@ for index=1:size(rP_vec,2)
     rP=rP_vec(index);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     
@@ -340,7 +340,7 @@ for index=1:size(rP_vec,2)
     rP=rP_vec(index);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
 
