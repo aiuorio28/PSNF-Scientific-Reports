@@ -90,9 +90,9 @@ for index=1:size(dSS_vec,2)
     dS = zeros(1,m); % reaction term for S
     dN = zeros(1,m); % reaction term for N
     dA = zeros(1,m); % reaction term for A
-    dI = zeros(1,m); % reaction term for T
+    dI = zeros(1,m); % reaction term for I
     NetS = zeros(1,m); % diffusion term for S
-    NetI = zeros(1,m); % diffusion term for T
+    NetI = zeros(1,m); % diffusion term for I
     
     % Boundary conditions
     FXS = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
