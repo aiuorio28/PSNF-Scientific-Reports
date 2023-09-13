@@ -1,6 +1,6 @@
 % Code to obtain Fig. 4(a) and Fig. 8 (first row)
 
-%% Effect of sensitivity to toxicity (rT) on maximmum amplitude profiles: Simulation of the PSNF model on a 1D domain
+%% Effect of establishment sensitivity to toxicity (rT) on maximmum amplitude profiles: Simulation of the PSNF model on a 1D domain
 
 % Variables describing the density of: S (seeds), N (seedlings), A (adults), I (inhibitor)
 
@@ -34,7 +34,7 @@ dSS=3;
 dII=0.5;
 
 % Parameter values (variable)
-rTref=68; % reference value for the sensitivity to toxicity parameter
+rTref=68; % reference value for the establishment sensitivity to toxicity parameter
 rT_vec=[25/100*rTref 50/100*rTref 75/100*rTref rTref];
 
 % Tolerances
