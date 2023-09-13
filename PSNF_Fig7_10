@@ -191,7 +191,7 @@ for index=1:size(growth,2)
         rP=growth(index,2);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     
@@ -230,7 +230,7 @@ for index=1:size(growth,2)
         rP=growth(index,2);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     
@@ -269,7 +269,7 @@ for index=1:size(growth,2)
         rP=growth(index,2);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     
@@ -308,7 +308,7 @@ for index=1:size(growth,2)
         rP=growth(index,2);
     
     load(['MatrixSeriespcfin_1D_maxampl_S_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
-    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat']) 
     load(['MatrixSeriespcfin_1D_maxampl_A_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     load(['MatrixSeriespcfin_1D_maxampl_I_growth4_gA=' num2str(gA)  '_rP=' num2str(rP) '.mat'])
     
