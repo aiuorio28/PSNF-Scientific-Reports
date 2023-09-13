@@ -51,7 +51,7 @@ NX=m;
 % Timesteps
 dt=0.001;     % timestep
 Time=0;      % begin time
-EndTime=20;    % end time %32 for gA=0.00019
+EndTime=20;    % end time
 PlotStep=1;
 PlotTime=PlotStep;
 TF=EndTime/dt;
