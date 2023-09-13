@@ -1,0 +1,405 @@
+% Code to obtain Fig. 4(a) and Fig. 8 (first row)
+
+%% Effect of sensitivity to toxicity (rT)on maximmum amplitude profiles: Simulation of the PSNF model on a 1D domain
+
+% Variables describing the density of: S (seeds), N (seedlings), A (adults), I (inhibitor)
+
+% Equations:
+% dS/dt = dSS*Delta S + gS*A - kS*S
+% dN/dt = gN*S/(1+beta*exp(rT*I)) - kN*N - gA*N*(1-A/Amax) - rP*N*I
+% dA/dt = (gA*N+cA*A)*(1-A/Amax) - kA*A
+% dI/dt = dII*Delta I + cT*A - kI*I
+
+clear all
+close all
+tic
+
+% System discretisation
+DeltaX=0.1; % 0.1
+
+% Parameter values (fixed)
+gS=0.033; 
+kS=0.33; 
+gN=5;
+beta=10^(-5);
+kN=0.5;
+rP=0;
+gA=0.2;
+cA=0.25; 
+Amax=30; 
+kA=0.01; 
+cT=1;
+kI=0.7; 
+dSS=3;
+dII=0.5;
+
+% Parameter values (variable)
+rTref=68; % reference value for the sensitivity to toxicity parameter
+rT_vec=[25/100*rTref 50/100*rTref 75/100*rTref rTref];
+
+% Tolerances
+eps=0.1;
+perc=0.005;
+tA=1/10000000;
+tN=1/10000000;
+q=1/1000;
+
+% Number of grid cells
+m=600;
+NX=m;
+
+% Timesteps
+dt=0.001;     % timestep
+Time=0;      % begin time
+EndTime=20;    % end time %32 for gA=0.00019
+PlotStep=1;
+PlotTime=PlotStep;
+TF=EndTime/dt;
+
+% Vectors to store infos
+tfin_vec=zeros(1,length(rT_vec));
+tfin_ind=zeros(1,length(rT_vec));
+ampl=zeros(length(rT_vec),TF);
+maxampl_vec=zeros(1,length(rT_vec));
+xampl_vec=zeros(length(rT_vec),TF);
+pampl_vec=zeros(length(rT_vec),TF);
+xMax_vec=zeros(1,length(rT_vec)); % for positioning the labels
+pMax_vec=zeros(1,length(rT_vec)); % for positioning the labels
+
+Sfin=zeros(length(rT_vec),m);
+Nfin=zeros(length(rT_vec),m);
+Afin=zeros(length(rT_vec),m);
+Ifin=zeros(length(rT_vec),m);
+
+Sseries=zeros(length(rT_vec),m,TF-1);
+Nseries=zeros(length(rT_vec),m,TF-1);
+Aseries=zeros(length(rT_vec),m,TF-1);
+Iseries=zeros(length(rT_vec),m,TF-1);
+
+xMax_lab=zeros(1,length(rT_vec)); % for positioning the labels
+pMax_lab=zeros(1,length(rT_vec));
+
+% Parameter loops
+
+for index=1:size(rT_vec,2)
+    rT=rT_vec(index);
+    
+    % Simulation loop
+    Time=0; 
+    it=1;
+    PlotTime=PlotStep;
+    
+    % Initialisation
+    S = zeros(1,m);
+    N = zeros(1,m);
+    A = zeros(1,m);
+    I = zeros(1,m);
+    dS = zeros(1,m); % reaction term for S
+    dN = zeros(1,m); % reaction term for N
+    dA = zeros(1,m); % reaction term for A
+    dI = zeros(1,m); % reaction term for I
+    NetS = zeros(1,m); % diffusion term for S
+    NetI = zeros(1,m); % diffusion term for I
+    
+    % Boundary conditions
+    FXS = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
+    FXI = zeros(1,NX+1);		% bound.con. no flow in/out to X-direction
+    
+    % Initial state
+    % S
+    for i=1:m
+        S(i)=exp(-m/4 + i - i^2/m);
+    end
+    % N
+    N(:)=0;
+    % A
+    A(:)=0;
+    % I
+    I(:)=0;
+    
+    
+    % Timesteps
+    while Time<=EndTime
+        
+        % Reaction
+        
+        dS = gS.*A - kS.*S;
+        dN = gN.*S./(1+beta.*exp(rT.*I)) - kN.*N - gA.*N.*(1-A./Amax) - rP.*N.*I;
+        dA = (gA.*N+cA.*A).*(1-A./Amax) - kA.*A;
+        dI = cT.*A - kI.*I;
+        
+        % Diffusion
+        
+        % Flow in x-direction
+        FXS(2:NX)=(S(2:NX)-S(1:NX-1))/DeltaX;
+        FXI(2:NX)=(I(2:NX)-I(1:NX-1))/DeltaX;
+        
+        % Netflow
+        NetS=dSS*(FXS(2:NX+1)-FXS(1:NX))/DeltaX;
+        NetI=dII*(FXI(2:NX+1)-FXI(1:NX))/DeltaX;
+        
+        % Update
+        S=S+(NetS+dS)*dt;
+        N=N+dN*dt;
+        A=A+dA*dt;
+        I=I+(NetI+dI)*dt;
+        
+        % Computing quantities for maximum amplitude
+        maxN=max(N);
+        xMaxN=find(abs(N-max(N))<tN,1,'last'); % spatial location of the peak on the right-half of the domain
+        xmid=round((m/2+xMaxN)/2,0); % midpoint between the domain center and xMaxN
+        
+        if (N(m/2) <= N(xmid)) && (N(xmid) <= maxN)
+            ampl(index,it)=abs(maxN-N(m/2));
+            xampl_vec(index,it)=xMaxN;
+            pampl_vec(index,it)=maxN;
+        end
+        
+        Time=Time+dt;
+        
+        Sseries(index,:,it)=S(:);
+        Nseries(index,:,it)=N(:);
+        Aseries(index,:,it)=A(:);
+        Iseries(index,:,it)=I(:);
+        
+        it=it+1;
+        
+    end
+    
+    maxampl_vec(index) = max(ampl(index,:));
+    tfin_vec(index) = (find(ampl(index,:)==max(ampl(index,:)),1,'first'))*dt;
+    tfin_ind(index) = tfin_vec(index)/dt;
+    xMax_vec(index)=xampl_vec(index,tfin_ind(index));
+    pMax_vec(index)=pampl_vec(index,tfin_ind(index));
+    
+    Sfin(index,:)=Sseries(index,:,tfin_ind(index));
+    Nfin(index,:)=Nseries(index,:,tfin_ind(index));
+    Afin(index,:)=Aseries(index,:,tfin_ind(index));
+    Ifin(index,:)=Iseries(index,:,tfin_ind(index));
+    
+    SSS = ['save MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat Sfin'];
+    eval(SSS)
+    
+    NNN = ['save MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat Nfin'];
+    eval(NNN)
+    
+    AAA = ['save MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat Afin'];
+    eval(AAA)
+    
+    III = ['save MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat Ifin'];
+    eval(III)
+    
+end
+toc
+
+%% Plots
+
+darkg = [0 0.5 0.4];
+
+lcol = {[0 0 0], [0 0 0], [0 0 0], [0 0 0]};
+lcolgr = {[0.7 0.7 0.7], [0.7 0.7 0.7], [0.7 0.7 0.7], [0.7 0.7 0.7]};
+lcolAcomb = {[0.8500, 0.3250, 0.0980],  [0.8500, 0.3250, 0.0980],  [0.8500, 0.3250, 0.0980], [0.6350, 0.0780, 0.1840], [0.6350, 0.0780, 0.1840]}; %[0.8500, 0.3250, 0.0980],  
+lsty = {':','-.','--','-'};
+
+for index=1:size(rT_vec,2)
+    rT=rT_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    II=Ifin(index,:);
+    
+    figure(1)
+    plot(SS,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    axis([m/2 m 0 2]);
+    xlabel('Distance from center of adults (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Seeds (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+end
+hold off;
+
+xh = get(gca,'xlabel'); 
+yh = get(gca,'ylabel'); 
+px = get(xh,'position'); 
+py = get(yh,'position'); 
+px(2) = px(2)-0.01 ;
+py(1) = py(1)-0.9 ;
+set(xh,'position',px); 
+set(yh,'position',py);  
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(rT_vec),1);
+for j=1:size(rT_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Intensity of NF','by growth inhibition'})
+leg.Title.Visible = 'on';
+
+for index=1:size(rT_vec,2)
+    rT=rT_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    II=Ifin(index,:);
+    
+    figure(2)
+    plot(NN,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    axis([m/2 m 0 1]);
+    xlabel('Distance from center of adults (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Seedlings (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+    if index == 1
+        xMax_lab(index)=xMax_vec(index)-8;
+        pMax_lab(index)=pMax_vec(index)+1/30;
+    end
+    if index >=2
+        if abs(pMax_vec(index)-pMax_vec(index-1)) <= q
+            xMax_lab(index)=xMax_lab(index-1)-17;
+            pMax_lab(index)=pMax_lab(index-1)-1/20;
+        else
+            xMax_lab(index)=xMax_vec(index)-8;
+            pMax_lab(index)=pMax_vec(index)+1/30;
+        end
+    end
+end
+h=yline(0,'Color',lcolgr{1},'linestyle',lsty{1},'LineWidth',0.5);
+h.Annotation.LegendInformation.IconDisplayStyle = 'off';
+hold off;
+
+xh = get(gca,'xlabel'); 
+yh = get(gca,'ylabel'); 
+px = get(xh,'position'); 
+py = get(yh,'position'); 
+px(2) = px(2)-0.01 ;
+py(1) = py(1)-0.9 ;
+set(xh,'position',px); 
+set(yh,'position',py);  
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(rT_vec),1);
+for j=1:size(rT_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Intensity of NF','by growth inhibition'})
+leg.Title.Visible = 'on';
+
+for index=1:size(rT_vec,2)
+    rT=rT_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    II=Ifin(index,:);
+    
+    figure(3)
+    plot(AA,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    axis([m/2 m 0 20]);
+    xlabel('Space (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Adults (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+end
+hold off;
+
+xh = get(gca,'xlabel'); 
+yh = get(gca,'ylabel'); 
+px = get(xh,'position'); 
+py = get(yh,'position'); 
+px(2) = px(2)-0.01 ;
+py(1) = py(1)-0.9 ;
+set(xh,'position',px); 
+set(yh,'position',py);  
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(rT_vec),1);
+for j=1:size(rT_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Intensity of NF','by growth inhibition'})
+leg.Title.Visible = 'on';
+
+for index=1:size(rT_vec,2)
+    rT=rT_vec(index);
+    
+    load(['MatrixSeriespcfin_1D_maxampl_S_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_N_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])          % MEIII NOME MATRICE DA APRIRE
+    load(['MatrixSeriespcfin_1D_maxampl_A_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    load(['MatrixSeriespcfin_1D_maxampl_I_effect_rT=' num2str(rT)  '_rP=' num2str(rP) '.mat'])
+    
+    SS=Sfin(index,:);
+    NN=Nfin(index,:);
+    AA=Afin(index,:);
+    II=Ifin(index,:);
+    
+    figure(4)
+    plot(II,'Color',lcol{index},'linestyle',lsty{index},'LineWidth',1);
+    if index == 1
+        hold on
+    end
+    axis square;
+    axis([m/2 m 0 25]);
+    xlabel('Distance from center of adults (m)','FontSize',12,'Interpreter','latex')
+    ylabel('Inhibitor (${\rm kg/m^2}$)','FontSize',12,'Interpreter','latex')
+    xticks([m/2 m/2+((m/2)/5) m/2+(2*(m/2)/5) m/2+(3*(m/2)/5) m/2+(4*(m/2)/5) m/2+(5*(m/2)/5)])
+    xticklabels({'0',(m/2)/50,(2*(m/2)/50),(3*(m/2)/50),(4*(m/2)/50),(5*(m/2)/50)})
+end
+hold off;
+
+xh = get(gca,'xlabel'); 
+yh = get(gca,'ylabel'); 
+px = get(xh,'position'); 
+py = get(yh,'position'); 
+px(2) = px(2)-0.01 ;
+py(1) = py(1)-0.9 ;
+set(xh,'position',px); 
+set(yh,'position',py);  
+
+listper=[25. 50. 75. 100.];
+
+Legend=cell(length(rT_vec),1);
+for j=1:size(rT_vec,2)
+    listper(j);
+    Legend{j}=strcat(num2str(listper(j)), '$\%$, $t_{\rm max} = $', num2str(round(tfin_vec(j),0)), '$\, {\rm y}$');
+end
+leg=legend(Legend,'Interpreter','latex');
+title(leg,{'Intensity of NF','by growth inhibition'})
+leg.Title.Visible = 'on';
