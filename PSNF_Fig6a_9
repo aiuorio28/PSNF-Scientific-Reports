@@ -142,7 +142,7 @@ for index=1:size(dSS_vec,2)
         xMaxN=find(abs(N-max(N))<tN,1,'last'); % spatial location of the peak on the right-half of the domain
         xmid=round((m/2+xMaxN)/2,0); % midpoint between the domain center and xMaxN
         
-        if (N(m/2) <= N(xmid)) && (N(xmid) <= maxN)
+        if (N(m/2) <= N(xmid)) && (N(xmid) <= maxN) % condition for occurrence of JC distribution
             ampl(index,it)=abs(maxN-N(m/2));  % amplitude of the seedlings profile
         end
         
@@ -411,3 +411,4 @@ end
 leg=legend(Legend,'Interpreter','latex');
 title(leg,{'Seed dispersal', 'intensity'})
 leg.Title.Visible = 'on';
+
